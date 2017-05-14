@@ -246,8 +246,11 @@ XPluginStart(char *outName, char * outSig, char *outDesc)
     if (fp == NULL)
         return 0;
 
-    // FIXME: read in loop?
-    fread(url, sizeof(char), 1024, fp);
+    size_t read_len = fread(url + read_len, sizeof(char), 1024 - read_len, fp);
+    if (!(read_len > 0 && feof(fp))) {
+        fclose(fp);
+        return 0;
+    }
     fclose(fp);
 
     if (url == NULL)
