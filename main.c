@@ -234,7 +234,7 @@ XPluginStart(char *outName, char * outSig, char *outDesc)
 {
     strcpy(outName, "xplogd");
     strcpy(outSig, "io.rgm.xplogd");
-    strcpy(outDesc, "A plugin that sends your flight data to a remote server.");
+    strcpy(outDesc, "A plugin that sends position data to a remote HTTP endpoint.");
 
     acf_icao_dr = XPLMFindDataRef("sim/aircraft/view/acf_ICAO");
     if (acf_icao_dr == NULL)
