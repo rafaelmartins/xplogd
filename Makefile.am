@@ -7,6 +7,7 @@ EXTRA_DIST = \
 	LICENSE \
 	README.md \
 	sdk/license.txt \
+	xplogd.txt \
 	$(NULL)
 
 noinst_HEADERS = \
@@ -46,11 +47,8 @@ xplogd_la_LDFLAGS = \
 xplogd.xpl: xplogd.la
 	cp .libs/xplogd.so xplogd.xpl
 
-xplogd.txt: $(top_srcdir)/xplogd.txt
-	cp $(top_srcdir)/xplogd.txt xplogd.txt
-
-plugin: xplogd.xpl xplogd.txt
+plugin: xplogd.xpl
 	-rm -f $(PACKAGE)-plugin-$(VERSION).zip
-	zip $(PACKAGE)-plugin-$(VERSION).zip xplogd.xpl xplogd.txt
+	zip $(PACKAGE)-plugin-$(VERSION).zip xplogd.xpl
 
 .PHONY: plugin
