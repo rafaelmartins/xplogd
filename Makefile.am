@@ -12,6 +12,7 @@ EXTRA_DIST = \
 noinst_HEADERS = \
 	sdk/XPLMDataAccess.h \
 	sdk/XPLMDefs.h \
+	sdk/XPLMMenus.h \
 	sdk/XPLMProcessing.h \
 	sdk/XPLMUtilities.h \
 	$(NULL)

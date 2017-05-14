@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <curl/curl.h>
 #include "sdk/XPLMDataAccess.h"
+#include "sdk/XPLMMenus.h"
 #include "sdk/XPLMProcessing.h"
 #include "sdk/XPLMUtilities.h"
 
@@ -36,6 +37,9 @@ static XPLMDataRef *true_airspeed_dr = NULL;
 static XPLMDataRef *vh_ind_dr = NULL;
 
 static char url[1024];
+static bool sending = true;
+static XPLMMenuID status_menu;
+static int status_index = 0;
 
 
 /* xplogd protocol, version 1
@@ -207,6 +211,14 @@ FlightLoopCallback(float elapsedMe, float elapsedSim, int counter, void *refcon)
         // delay next cycle in 10s, to give the server a bit more time to
         // recover
         time += 10;
+        if (sending) {
+            XPLMSetMenuItemName(status_menu, status_index, "Status: Failed", 1);
+            sending = false;
+        }
+    }
+    else if (!sending) {
+        XPLMSetMenuItemName(status_menu, status_index, "Status: Ok", 1);
+        sending = true;
     }
 
 cleanup:
@@ -240,6 +252,14 @@ XPluginStart(char *outName, char * outSig, char *outDesc)
 
     if (url == NULL)
         return 0;
+
+    int submenu = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "xplogd", 0, 1);
+    status_menu = XPLMCreateMenu("xplogd", XPLMFindPluginsMenu(),
+        submenu, NULL, 0);
+
+    sending = true;
+    status_index = XPLMAppendMenuItem(status_menu, "Status: Ok", NULL, 1);
+    XPLMEnableMenuItem(status_menu, status_index, 0);
 
     acf_icao_dr = XPLMFindDataRef("sim/aircraft/view/acf_ICAO");
     if (acf_icao_dr == NULL)
