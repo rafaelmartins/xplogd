@@ -196,19 +196,6 @@ FlightLoopCallback(float elapsedMe, float elapsedSim, int counter, void *refcon)
     data->air_speed = XPLMGetDataf(air_speed_dr);
     data->vertical_speed = XPLMGetDataf(vertical_speed_dr);
 
-    // FIXME: remove this
-    FILE *fp = fopen("/tmp/lol.txt", "a");
-    fprintf(fp, "aircraft_icao: %s\n", data->aircraft_icao);
-    fprintf(fp, "aircraft_tailnum: %s\n", data->aircraft_tailnum);
-    fprintf(fp, "latitude: %f\n", data->latitude);
-    fprintf(fp, "longitude: %f\n", data->longitude);
-    fprintf(fp, "altitude: %f\n", data->altitude);
-    fprintf(fp, "track: %f\n", data->track);
-    fprintf(fp, "ground_speed: %f\n", data->ground_speed);
-    fprintf(fp, "air_speed: %f\n", data->air_speed);
-    fprintf(fp, "vertical_speed: %f\n\n", data->vertical_speed);
-    fclose(fp);
-
     // FIXME: make this global, and increment with retries
     float time = 5;  // in seconds
 

@@ -46,7 +46,11 @@ xplogd_la_LDFLAGS = \
 xplogd.xpl: xplogd.la
 	cp .libs/xplogd.so xplogd.xpl
 
-plugin: xplogd.xpl
-	zip $(PACKAGE)-plugin-$(VERSION).zip xplogd.xpl
+xplogd.txt: $(top_srcdir)/xplogd.txt
+	cp $(top_srcdir)/xplogd.txt xplogd.txt
+
+plugin: xplogd.xpl xplogd.txt
+	-rm -f $(PACKAGE)-plugin-$(VERSION).zip
+	zip $(PACKAGE)-plugin-$(VERSION).zip xplogd.xpl xplogd.txt
 
 .PHONY: plugin
