@@ -26,15 +26,15 @@ typedef struct {
 } position_data_t;
 
 
-static XPLMDataRef *acf_icao_dr = NULL;
-static XPLMDataRef *acf_tailnum_dr = NULL;
+static XPLMDataRef *aircraft_icao_dr = NULL;
+static XPLMDataRef *aircraft_tailnum_dr = NULL;
 static XPLMDataRef *latitude_dr = NULL;
 static XPLMDataRef *longitude_dr = NULL;
-static XPLMDataRef *elevation_dr = NULL;
-static XPLMDataRef *mag_psi_dr = NULL;
-static XPLMDataRef *groundspeed_dr = NULL;
-static XPLMDataRef *true_airspeed_dr = NULL;
-static XPLMDataRef *vh_ind_dr = NULL;
+static XPLMDataRef *altitude_dr = NULL;
+static XPLMDataRef *track_dr = NULL;
+static XPLMDataRef *ground_speed_dr = NULL;
+static XPLMDataRef *air_speed_dr = NULL;
+static XPLMDataRef *vertical_speed_dr = NULL;
 
 static char url[1024];
 static bool sending = true;
@@ -52,6 +52,9 @@ static int status_index;
  * The server should return 202 to notify that accepted the data, and always
  * check if the client sent the correct content-type header
  * (application/vnd.xplogd.serialized).
+ *
+ * When a request is not accepted, the client may take some action to recover,
+ * like stop sending for a while, or increase the send intervals.
  */
 const char *body_format =
     "1\n"   // protocol version
@@ -177,21 +180,21 @@ FlightLoopCallback(float elapsedMe, float elapsedSim, int counter, void *refcon)
     if (data == NULL)
         goto cleanup;
 
-    XPLMGetDatab(acf_icao_dr, data->aircraft_icao, 0, 40);
+    XPLMGetDatab(aircraft_icao_dr, data->aircraft_icao, 0, 40);
     if (data->aircraft_icao == NULL)
         goto cleanup;
 
-    XPLMGetDatab(acf_tailnum_dr, data->aircraft_tailnum, 0, 40);
+    XPLMGetDatab(aircraft_tailnum_dr, data->aircraft_tailnum, 0, 40);
     if (data->aircraft_tailnum == NULL)
         goto cleanup;
 
     data->latitude = XPLMGetDatad(latitude_dr);
     data->longitude = XPLMGetDatad(longitude_dr);
-    data->altitude = XPLMGetDatad(elevation_dr);
-    data->track = XPLMGetDataf(mag_psi_dr);
-    data->ground_speed = XPLMGetDataf(groundspeed_dr);
-    data->air_speed = XPLMGetDataf(true_airspeed_dr);
-    data->vertical_speed = XPLMGetDataf(vh_ind_dr);
+    data->altitude = XPLMGetDatad(altitude_dr);
+    data->track = XPLMGetDataf(track_dr);
+    data->ground_speed = XPLMGetDataf(ground_speed_dr);
+    data->air_speed = XPLMGetDataf(air_speed_dr);
+    data->vertical_speed = XPLMGetDataf(vertical_speed_dr);
 
     // FIXME: remove this
     FILE *fp = fopen("/tmp/lol.txt", "a");
@@ -236,12 +239,12 @@ XPluginStart(char *outName, char * outSig, char *outDesc)
     strcpy(outSig, "io.rgm.xplogd");
     strcpy(outDesc, "A plugin that sends position data to a remote HTTP endpoint.");
 
-    acf_icao_dr = XPLMFindDataRef("sim/aircraft/view/acf_ICAO");
-    if (acf_icao_dr == NULL)
+    aircraft_icao_dr = XPLMFindDataRef("sim/aircraft/view/acf_ICAO");
+    if (aircraft_icao_dr == NULL)
         return 0;
 
-    acf_tailnum_dr = XPLMFindDataRef("sim/aircraft/view/acf_tailnum");
-    if (acf_tailnum_dr == NULL)
+    aircraft_tailnum_dr = XPLMFindDataRef("sim/aircraft/view/acf_tailnum");
+    if (aircraft_tailnum_dr == NULL)
         return 0;
 
     latitude_dr = XPLMFindDataRef("sim/flightmodel/position/latitude");
@@ -252,24 +255,24 @@ XPluginStart(char *outName, char * outSig, char *outDesc)
     if (longitude_dr == NULL)
         return 0;
 
-    elevation_dr = XPLMFindDataRef("sim/flightmodel/position/elevation");
-    if (elevation_dr == NULL)
+    altitude_dr = XPLMFindDataRef("sim/flightmodel/position/elevation");
+    if (altitude_dr == NULL)
         return 0;
 
-    mag_psi_dr = XPLMFindDataRef("sim/flightmodel/position/mag_psi");
-    if (mag_psi_dr == NULL)
+    track_dr = XPLMFindDataRef("sim/flightmodel/position/mag_psi");
+    if (track_dr == NULL)
         return 0;
 
-    groundspeed_dr = XPLMFindDataRef("sim/flightmodel/position/groundspeed");
-    if (groundspeed_dr == NULL)
+    ground_speed_dr = XPLMFindDataRef("sim/flightmodel/position/groundspeed");
+    if (ground_speed_dr == NULL)
         return 0;
 
-    true_airspeed_dr = XPLMFindDataRef("sim/flightmodel/position/true_airspeed");
-    if (true_airspeed_dr == NULL)
+    air_speed_dr = XPLMFindDataRef("sim/flightmodel/position/true_airspeed");
+    if (air_speed_dr == NULL)
         return 0;
 
-    vh_ind_dr = XPLMFindDataRef("sim/flightmodel/position/vh_ind");
-    if (vh_ind_dr == NULL)
+    vertical_speed_dr = XPLMFindDataRef("sim/flightmodel/position/vh_ind");
+    if (vertical_speed_dr == NULL)
         return 0;
 
     return 1;
