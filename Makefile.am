@@ -30,6 +30,7 @@ xplogd_la_CFLAGS = \
 	$(LIBCURL_CFLAGS) \
 	-fvisibility=hidden \
 	-DLIN=1 \
+	-DXPLM210=1 \
 	$(NULL)
 
 xplogd_la_LIBADD = \

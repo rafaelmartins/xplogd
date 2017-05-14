@@ -38,8 +38,10 @@ static XPLMDataRef *vh_ind_dr = NULL;
 
 static char url[1024];
 static bool sending = true;
+
+static int main_submenu;
 static XPLMMenuID status_menu;
-static int status_index = 0;
+static int status_index;
 
 
 /* xplogd protocol, version 1
@@ -234,36 +236,6 @@ XPluginStart(char *outName, char * outSig, char *outDesc)
     strcpy(outSig, "io.rgm.xplogd");
     strcpy(outDesc, "A plugin that sends your flight data to a remote server.");
 
-    char config_file[1024];
-    XPLMGetSystemPath(config_file);
-    strcat(config_file, "Resources");
-    strcat(config_file, XPLMGetDirectorySeparator());
-    strcat(config_file, "plugins");
-    strcat(config_file, XPLMGetDirectorySeparator());
-    strcat(config_file, "xplogd.txt");
-
-    FILE *fp = fopen(config_file, "r");
-    if (fp == NULL)
-        return 0;
-
-    size_t read_len = fread(url + read_len, sizeof(char), 1024 - read_len, fp);
-    if (!(read_len > 0 && feof(fp))) {
-        fclose(fp);
-        return 0;
-    }
-    fclose(fp);
-
-    if (url == NULL)
-        return 0;
-
-    int submenu = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "xplogd", 0, 1);
-    status_menu = XPLMCreateMenu("xplogd", XPLMFindPluginsMenu(),
-        submenu, NULL, 0);
-
-    sending = true;
-    status_index = XPLMAppendMenuItem(status_menu, "Status: Ok", NULL, 1);
-    XPLMEnableMenuItem(status_menu, status_index, 0);
-
     acf_icao_dr = XPLMFindDataRef("sim/aircraft/view/acf_ICAO");
     if (acf_icao_dr == NULL)
         return 0;
@@ -300,8 +272,6 @@ XPluginStart(char *outName, char * outSig, char *outDesc)
     if (vh_ind_dr == NULL)
         return 0;
 
-    XPLMRegisterFlightLoopCallback(FlightLoopCallback, -1, 0);
-
     return 1;
 }
 
@@ -315,12 +285,48 @@ XPluginStop(void)
 PLUGIN_API void
 XPluginDisable(void)
 {
+    XPLMUnregisterFlightLoopCallback(FlightLoopCallback, NULL);
+    XPLMClearAllMenuItems(status_menu);
+    XPLMDestroyMenu(status_menu);
+    XPLMRemoveMenuItem(XPLMFindPluginsMenu(), main_submenu);
 }
 
 
 PLUGIN_API int
 XPluginEnable(void)
 {
+    char config_file[1024];
+    XPLMGetSystemPath(config_file);
+    strcat(config_file, "Resources");
+    strcat(config_file, XPLMGetDirectorySeparator());
+    strcat(config_file, "plugins");
+    strcat(config_file, XPLMGetDirectorySeparator());
+    strcat(config_file, "xplogd.txt");
+
+    FILE *fp = fopen(config_file, "r");
+    if (fp == NULL)
+        return 0;
+
+    size_t read_len = fread(url + read_len, sizeof(char), 1024 - read_len, fp);
+    if (!(read_len > 0 && feof(fp))) {
+        fclose(fp);
+        return 0;
+    }
+    fclose(fp);
+
+    if (url == NULL)
+        return 0;
+
+    int main_submenu = XPLMAppendMenuItem(XPLMFindPluginsMenu(), "xplogd", 0, 1);
+    status_menu = XPLMCreateMenu("xplogd", XPLMFindPluginsMenu(),
+        main_submenu, NULL, 0);
+
+    sending = true;
+    status_index = XPLMAppendMenuItem(status_menu, "Status: Ok", NULL, 1);
+    XPLMEnableMenuItem(status_menu, status_index, 0);
+
+    XPLMRegisterFlightLoopCallback(FlightLoopCallback, -1, 0);
+
     return 1;
 }
 
