@@ -13,6 +13,7 @@ noinst_HEADERS = \
 	sdk/XPLMDataAccess.h \
 	sdk/XPLMDefs.h \
 	sdk/XPLMProcessing.h \
+	sdk/XPLMUtilities.h \
 	$(NULL)
 
 lib_LTLIBRARIES = \
@@ -25,8 +26,13 @@ xplogd_la_SOURCES = \
 
 xplogd_la_CFLAGS = \
 	$(AM_CFLAGS) \
+	$(LIBCURL_CFLAGS) \
 	-fvisibility=hidden \
 	-DLIN=1 \
+	$(NULL)
+
+xplogd_la_LIBADD = \
+	$(LIBCURL_LIBS) \
 	$(NULL)
 
 xplogd_la_LDFLAGS = \

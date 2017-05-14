@@ -1,8 +1,15 @@
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif /* HAVE_CONFIG_H */
+
+#include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <curl/curl.h>
 #include "sdk/XPLMDataAccess.h"
 #include "sdk/XPLMProcessing.h"
+#include "sdk/XPLMUtilities.h"
 
 
 typedef struct {
@@ -28,6 +35,134 @@ static XPLMDataRef *groundspeed_dr = NULL;
 static XPLMDataRef *true_airspeed_dr = NULL;
 static XPLMDataRef *vh_ind_dr = NULL;
 
+static char url[1024];
+
+
+/* xplogd protocol, version 1
+ *
+ * This is the definition of our protocol. all the fields are separated with
+ * a newline '\n' character.
+ *
+ * The server should return 202 to notify that accepted the data, and always
+ * check if the client sent the correct content-type header
+ * (application/vnd.xplogd.serialized).
+ */
+const char *body_format =
+    "1\n"   // protocol version
+    "%s\n"  // aircraft icao
+    "%s\n"  // aircraft tailnum
+    "%f\n"  // latitude in degrees
+    "%f\n"  // longitude in degrees
+    "%f\n"  // altitude in meters (not feets!)
+    "%f\n"  // track in degrees
+    "%f\n"  // ground speed in meters per second (not knots!)
+    "%f\n"  // air speed in meters per second (not knots!)
+    "%f\n"  // vertical speed meters per second (not feets per minute!)
+    "";
+
+
+static bool
+SendPositionData(const char *url, position_data_t *data)
+{
+    if (url == NULL || data == NULL)
+        return false;
+
+    int body_len = snprintf(NULL, 0, body_format, data->aircraft_icao,
+        data->aircraft_tailnum, data->latitude, data->longitude, data->altitude,
+        data->track, data->ground_speed, data->air_speed, data->vertical_speed);
+
+    if (body_len <= 0)
+        return false;
+
+    char *body = malloc(body_len + 1);
+    if (body == NULL)
+        return false;
+
+    snprintf(body, body_len + 1, body_format, data->aircraft_icao,
+        data->aircraft_tailnum, data->latitude, data->longitude, data->altitude,
+        data->track, data->ground_speed, data->air_speed, data->vertical_speed);
+
+    struct curl_slist *headers = NULL;
+    headers = curl_slist_append(headers,
+        "Content-Type: application/vnd.xplogd.serialized");
+
+    CURL *hnd = curl_easy_init();
+    curl_easy_setopt(hnd, CURLOPT_URL, url);
+    curl_easy_setopt(hnd, CURLOPT_NOPROGRESS, 1L);
+    curl_easy_setopt(hnd, CURLOPT_USERAGENT, PACKAGE_NAME "/" PACKAGE_VERSION);
+    curl_easy_setopt(hnd, CURLOPT_HTTPHEADER, headers);
+    curl_easy_setopt(hnd, CURLOPT_MAXREDIRS, 50L);
+    curl_easy_setopt(hnd, CURLOPT_POSTFIELDS, body);
+
+    bool rv = curl_easy_perform(hnd) == CURLE_OK;
+    if (rv) {
+        long http_code = 0;
+        curl_easy_getinfo(hnd, CURLINFO_RESPONSE_CODE, &http_code);
+        rv = http_code == 202;
+    }
+
+    free(body);
+    curl_slist_free_all(headers);
+    curl_easy_cleanup(hnd);
+
+    return rv;
+}
+
+
+static char*
+str_lstrip(char *str)
+{
+    if (str == NULL)
+        return NULL;
+    int i;
+    size_t str_len = strlen(str);
+    for (i = 0; i < str_len; i++) {
+        if ((str[i] != ' ') && (str[i] != '\t') && (str[i] != '\n') &&
+            (str[i] != '\r') && (str[i] != '\t') && (str[i] != '\f') &&
+            (str[i] != '\v'))
+        {
+            str += i;
+            break;
+        }
+        if (i == str_len - 1) {
+            str += str_len;
+            break;
+        }
+    }
+    return str;
+}
+
+
+static char*
+str_rstrip(char *str)
+{
+    if (str == NULL)
+        return NULL;
+    int i;
+    size_t str_len = strlen(str);
+    for (i = str_len - 1; i >= 0; i--) {
+        if ((str[i] != ' ') && (str[i] != '\t') && (str[i] != '\n') &&
+            (str[i] != '\r') && (str[i] != '\t') && (str[i] != '\f') &&
+            (str[i] != '\v'))
+        {
+            str[i + 1] = '\0';
+            break;
+        }
+        if (i == 0) {
+            str[0] = '\0';
+            break;
+        }
+    }
+    return str;
+}
+
+
+char*
+str_strip(char *str)
+{
+    return str_lstrip(str_rstrip(str));
+}
+
 
 static float
 FlightLoopCallback(float elapsedMe, float elapsedSim, int counter, void *refcon)
@@ -52,6 +187,7 @@ FlightLoopCallback(float elapsedMe, float elapsedSim, int counter, void *refcon)
     data->air_speed = XPLMGetDataf(true_airspeed_dr);
     data->vertical_speed = XPLMGetDataf(vh_ind_dr);
 
+    // FIXME: remove this
     FILE *fp = fopen("/tmp/lol.txt", "a");
     fprintf(fp, "aircraft_icao: %s\n", data->aircraft_icao);
     fprintf(fp, "aircraft_tailnum: %s\n", data->aircraft_tailnum);
@@ -64,9 +200,18 @@ FlightLoopCallback(float elapsedMe, float elapsedSim, int counter, void *refcon)
     fprintf(fp, "vertical_speed: %f\n\n", data->vertical_speed);
     fclose(fp);
 
+    // FIXME: make this global, and increment with retries
+    float time = 5;  // in seconds
+
+    if (!SendPositionData(str_strip(url), data)) {
+        // delay next cycle in 10s, to give the server a bit more time to
+        // recover
+        time += 10;
+    }
+
 cleanup:
     free(data);
-    return 5;  // 5 seconds
+    return time;
 }
 
 
@@ -76,6 +221,25 @@ XPluginStart(char *outName, char * outSig, char *outDesc)
     strcpy(outName, "xplogd");
     strcpy(outSig, "io.rgm.xplogd");
     strcpy(outDesc, "A plugin that sends your flight data to a remote server.");
+
+    char config_file[1024];
+    XPLMGetSystemPath(config_file);
+    strcat(config_file, "Resources");
+    strcat(config_file, XPLMGetDirectorySeparator());
+    strcat(config_file, "plugins");
+    strcat(config_file, XPLMGetDirectorySeparator());
+    strcat(config_file, "xplogd.txt");
+
+    FILE *fp = fopen(config_file, "r");
+    if (fp == NULL)
+        return 0;
+
+    // FIXME: read in loop?
+    fread(url, sizeof(char), 1024, fp);
+    fclose(fp);
+
+    if (url == NULL)
+        return 0;
 
     acf_icao_dr = XPLMFindDataRef("sim/aircraft/view/acf_ICAO");
     if (acf_icao_dr == NULL)
