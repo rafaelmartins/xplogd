@@ -16,6 +16,7 @@
 typedef struct {
     char aircraft_icao[40];
     char aircraft_tailnum[40];
+    char aircraft_description[260];
     double latitude;
     double longitude;
     double altitude;
@@ -28,6 +29,7 @@ typedef struct {
 
 static XPLMDataRef *aircraft_icao_dr = NULL;
 static XPLMDataRef *aircraft_tailnum_dr = NULL;
+static XPLMDataRef *aircraft_description_dr = NULL;
 static XPLMDataRef *latitude_dr = NULL;
 static XPLMDataRef *longitude_dr = NULL;
 static XPLMDataRef *altitude_dr = NULL;
@@ -60,6 +62,7 @@ const char *body_format =
     "1\n"   // protocol version
     "%s\n"  // aircraft icao
     "%s\n"  // aircraft tailnum
+    "%s\n"  // aircraft description
     "%f\n"  // latitude in degrees
     "%f\n"  // longitude in degrees
     "%f\n"  // altitude in meters (not feets!)
@@ -77,8 +80,9 @@ SendPositionData(const char *url, position_data_t *data)
         return false;
 
     int body_len = snprintf(NULL, 0, body_format, data->aircraft_icao,
-        data->aircraft_tailnum, data->latitude, data->longitude, data->altitude,
-        data->track, data->ground_speed, data->air_speed, data->vertical_speed);
+        data->aircraft_tailnum, data->aircraft_description, data->latitude,
+        data->longitude, data->altitude, data->track, data->ground_speed,
+        data->air_speed, data->vertical_speed);
 
     if (body_len <= 0)
         return false;
@@ -88,8 +92,9 @@ SendPositionData(const char *url, position_data_t *data)
         return false;
 
     snprintf(body, body_len + 1, body_format, data->aircraft_icao,
-        data->aircraft_tailnum, data->latitude, data->longitude, data->altitude,
-        data->track, data->ground_speed, data->air_speed, data->vertical_speed);
+        data->aircraft_tailnum, data->aircraft_description, data->latitude,
+        data->longitude, data->altitude, data->track, data->ground_speed,
+        data->air_speed, data->vertical_speed);
 
     struct curl_slist *headers = NULL;
     headers = curl_slist_append(headers,
@@ -188,6 +193,10 @@ FlightLoopCallback(float elapsedMe, float elapsedSim, int counter, void *refcon)
     if (data->aircraft_tailnum == NULL)
         goto cleanup;
 
+    XPLMGetDatab(aircraft_description_dr, data->aircraft_description, 0, 260);
+    if (data->aircraft_description == NULL)
+        goto cleanup;
+
     data->latitude = XPLMGetDatad(latitude_dr);
     data->longitude = XPLMGetDatad(longitude_dr);
     data->altitude = XPLMGetDatad(altitude_dr);
@@ -232,6 +241,10 @@ XPluginStart(char *outName, char * outSig, char *outDesc)
 
     aircraft_tailnum_dr = XPLMFindDataRef("sim/aircraft/view/acf_tailnum");
     if (aircraft_tailnum_dr == NULL)
+        return 0;
+
+    aircraft_description_dr = XPLMFindDataRef("sim/aircraft/view/acf_descrip");
+    if (aircraft_description_dr == NULL)
         return 0;
 
     latitude_dr = XPLMFindDataRef("sim/flightmodel/position/latitude");

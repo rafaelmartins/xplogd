@@ -45,6 +45,7 @@ const char *body_format =
     "1\n"   // protocol version
     "%s\n"  // aircraft icao
     "%s\n"  // aircraft tailnum
+    "%s\n"  // aircraft description
     "%f\n"  // latitude in degrees
     "%f\n"  // longitude in degrees
     "%f\n"  // altitude in meters (not feets!)
