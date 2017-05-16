@@ -206,7 +206,7 @@ FlightLoopCallback(float elapsedMe, float elapsedSim, int counter, void *refcon)
     data->vertical_speed = XPLMGetDataf(vertical_speed_dr);
 
     // FIXME: make this global, and increment with retries
-    float time = 5;  // in seconds
+    float time = 3;  // in seconds
 
     if (!SendPositionData(str_strip(url), data)) {
         // delay next cycle in 10s, to give the server a bit more time to
