@@ -231,9 +231,9 @@ cleanup:
 PLUGIN_API int
 XPluginStart(char *outName, char * outSig, char *outDesc)
 {
-    strcpy(outName, "xplogd");
+    strcpy(outName, PACKAGE_STRING);
     strcpy(outSig, "io.rgm.xplogd");
-    strcpy(outDesc, "A plugin that sends position data to a remote HTTP endpoint.");
+    strcpy(outDesc, "A plugin that sends position data to a remote HTTP endpoint");
 
     aircraft_icao_dr = XPLMFindDataRef("sim/aircraft/view/acf_ICAO");
     if (aircraft_icao_dr == NULL)
