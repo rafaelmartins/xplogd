@@ -310,7 +310,7 @@ XPluginEnable(void)
     if (fp == NULL)
         return 0;
 
-    size_t read_len = fread(url + read_len, sizeof(char), 1024 - read_len, fp);
+    size_t read_len = fread(url, sizeof(char), 1024, fp);
     if (!(read_len > 0 && feof(fp))) {
         fclose(fp);
         return 0;
