@@ -64,6 +64,9 @@ const char *flight_format =
  * The server should return 202 to notify that accepted the data. When a
  * request is not accepted, the client may take some action to recover, like
  * stop sending for a while, or increase the send intervals.
+ *
+ * There's no guarantee that the data was processed by the server right after
+ * the request. The server can do the processing asyncronously.
  */
 const char *position_format =
     "1\n"     // protocol version
