@@ -406,6 +406,8 @@ XPluginDisable(void)
     XPLMClearAllMenuItems(status_menu);
     XPLMDestroyMenu(status_menu);
     XPLMRemoveMenuItem(XPLMFindPluginsMenu(), main_submenu);
+    flight_id = -1;
+    sending = false;
 }
 
 
